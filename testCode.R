@@ -12,14 +12,26 @@ breed <- function(i,j, solutionstokeep=solutionstokeep, variables=variables) {
   bredsolution
 }
 
+mutate <- function(solution, mutatethreshold=0.1)
+{
+    mutatedsolution<-matrix(0, nrow=1,ncol=variables)
+    for(k in 1:variables)
+    {
+        ifelse(runif(1)<mutatethreshold,
+               mutatedsolution[1,k]<-solution[k],
+               mutatedsolution[1,k]<-runif(1,-100,100)
+               )
+    }
+    mutatedsolution
+}
 
 
 # Create data -------------------------------------------------------------
 # set.seed(665544)
 # Let's do 10 variables and 100 observations
 variables = 10
-observations = 100
-error = 20
+observations = 1000
+error = 5
 datacenters<-runif(variables,-100,100)
 
 datacreate<-matrix(nrow=observations, ncol=variables)
@@ -48,21 +60,30 @@ df$y<-yvalues
 
 (fmla <- as.formula(paste("y ~ ", paste(xnam, collapse= "+"))))
 
+# Loop through the starting seeds
+loops = 500 # for now, until I get mutate working, we're going to just do a bunch of loops
+RMSEbest<-data.frame(RMSE=rep(-1000, loops))
+BestSolutions<-matrix(data=rep(-1000, variables*loops), nrow=loops, ncol=variables)
+
+
+for(loop in 1:loops)
+{
 
 # Create First 100 solutions ----------------------------------------------
 solutions = 100
 newsolutions<-matrix(data=runif(solutions*variables,-100,100), nrow=solutions, ncol=variables)
 RMSE<-data.frame(value=rep(-1000000, solutions))
+solutionstokeep<-newsolutions
 
 
 # Go through iterations ---------------------------------------------------
 numIterations = 100
-
 for(iter in 1:numIterations)
 {
-print(paste(iter,dim(unique(solutionstokeep))[1], sep=" - "))
-    
-solutioncenters<-newsolutions
+
+    print(paste("Loop", loop, "Iter", iter, "Curr. Solns",dim(unique(solutionstokeep))[1], sep=" - "))
+    (if (iter > 1 && dim(unique(solutionstokeep))[1]==1) break)
+    solutioncenters<-newsolutions
 
 for(i in 1:solutions)
 {
@@ -82,22 +103,15 @@ for(i in 1:dim(solutionstokeep)[1])
     #breeding i and j. For each parameter, keep i if random value is less than threshold, j if greater
     #This is the breed function
     newsolutions[10*(i-1)+j,]<-breed(i,j,solutionstokeep, variables)
-    
-    # 
-    # for(k in 1:variables)
-    # {
-    #   ifelse(runif(1)<threshold,
-    #   newsolutions[10*(i-1)+j,k]<-solutionstokeep[i,k],
-    #   newsolutions[10*(i-1)+j,k]<-solutionstokeep[j,k]
-    #   )
-    # }
-    
+    #Now mutate!
+    #newsolutions[10*(i-1)+j,]<-mutate(newsolutions[10*(i-1)+j,], mutatethreshold=0.1)
   }
 }
 
 
 
 
+#endIteration
 }
 
 for(i in 1:solutions)
@@ -107,11 +121,22 @@ for(i in 1:solutions)
   RMSE[i,]<-sum((yvi-yvalues)^2)/observations
 }
 
-#keep top ten solutions and breed them
-solutionvector
-unique(solutionstokeep)
-RMSE[1,]
 
+#solutionvector
+BestSolutions[loop,]<-unique(solutionstokeep)
+RMSEbest[loop,]<-RMSE[1,]
+
+
+#end loop
+}
+
+# Show very best solution
+barplot(sort(RMSEbest[[1]]))
+barplot(sort(RMSEbest[[1]]), log="y")
+
+solutiontocompare<-BestSolutions[order(RMSEbest[[1]])==1,]
+
+yvalscompare<-xvalues%*%solutiontocompare
 
 
 
