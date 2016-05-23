@@ -30,8 +30,9 @@ judgesolutions <- function(solutionset, yv=yvalues, xv=xvalues)
   metric<-rep(-1,dim(solutionset)[1])
   for(i in 1:dim(solutionset)[1])
   {
-    solution1<-newsolutions[i,]
-    yvi<-xv%*%as.matrix(solution1)
+    solution1<-solutionset[i,]
+    yvalues<-t(tcrossprod(solutionvector,as.matrix(datacreate)))
+    yvi<-t(tcrossprod(solution1, as.matrix(xv)))
     metric[i]<-summary(lm(yv~yvi))$r.squared # this allows for there to be a big offset. Also, the correlation could be negative
   }    
   
@@ -42,10 +43,13 @@ judgesolutions <- function(solutionset, yv=yvalues, xv=xvalues)
 # Create data -------------------------------------------------------------
 # set.seed(665544)
 # Let's do 10 variables and 100 observations
-variables = 10
-observations = 10000
+variables = 20
+observations = 10
 error = 5
 datacenters<-runif(variables,-100,100)
+loops = 100
+iterations = 100
+solutions = 100
 
 datacreate<-matrix(nrow=observations, ncol=variables)
 
@@ -60,11 +64,10 @@ colnames(datacreate)<-xnam
 df<-as.data.frame(datacreate)
 #let's try this formula: x1+5*x2+10*x3-7*x4+10*x5-x6+13.3*x7-12.8*x8+1.45*x9-20*x10
 #solutionvector<-c(1, 5, 10, -7, 10, -1, 13.3, -12.8, 1.45, -20)
-solutionvector<-round(runif(10,-20,20))
+solutionvector<-round(runif(variables,-20,20))
 sm<-as.matrix(solutionvector)
-yvalues<-datacreate%*%sm
+yvalues<-t(tcrossprod(solutionvector,as.matrix(datacreate)))
 xvalues<-datacreate
-df$y<-yvalues
 
 xnam <- paste0("x", 1:variables)
 colnames(xvalues)<-xnam
@@ -139,8 +142,8 @@ solutionforloop<-unique(solutionstokeep)
 
 for(i in 1:dim(solutionforloop)[1])
 {
-  smi<-as.matrix(solutionforloop[i,])
-  yvi<-xvalues%*%smi
+  smi<-solutionforloop[i,]
+  yvi<-t(tcrossprod(smi,as.matrix(xvalues)))
   RMSE[i,]<-sum((yvi-yvalues)^2)/observations
   Rsq[i,]<-summary(lm(yvalues~yvi))$r.squared
 }
@@ -164,3 +167,10 @@ solutiontocompare<-BestSolutions[rank(1-Rsqbest[[1]])==1,]
 yvalscompare<-xvalues%*%solutiontocompare
 
 plot(yvalues, yvalscompare)
+
+plot(density(BestSolutions[,1]))
+for(i in 2:dim(BestSolutions)[2])
+{
+  lines(density(BestSolutions[,i]))
+}
+  
