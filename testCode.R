@@ -41,15 +41,15 @@ judgesolutions <- function(solutionset, yv=yvalues, xv=xvalues)
 
 
 # Create data -------------------------------------------------------------
-# set.seed(665544)
-# Let's do 10 variables and 100 observations
-variables = 20
-observations = 10
+variables = 10
+observations = 1000
 error = 5
 datacenters<-runif(variables,-100,100)
 loops = 100
-iterations = 100
+numIterations = 100
 solutions = 100
+threshold<-0.5 #breed mixing
+mutatethreshold<-0.01
 
 datacreate<-matrix(nrow=observations, ncol=variables)
 
@@ -79,7 +79,6 @@ df$y<-yvalues
 (fmla <- as.formula(paste("y ~ ", paste(xnam, collapse= "+"))))
 
 # Loop through the starting seeds
-loops = 100 # for now, until I get mutate working, we're going to just do a bunch of loops
 RMSEbest<-data.frame(RMSE=rep(-1000, loops))
 Rsqbest<-data.frame(Rsq=rep(-1000, loops))
 BestSolutions<-matrix(data=rep(-1000, variables*loops), nrow=loops, ncol=variables)
@@ -89,7 +88,6 @@ for(loop in 1:loops)
 {
 
 # Create First 100 solutions ----------------------------------------------
-solutions = 100
 newsolutions<-matrix(data=runif(solutions*variables,-100,100), nrow=solutions, ncol=variables)
 RMSE<-data.frame(value=rep(-1000000, solutions))
 Rsq<-data.frame(value=rep(-1000000, solutions))
@@ -97,7 +95,6 @@ solutionstokeep<-newsolutions
 
 
 # Go through iterations ---------------------------------------------------
-numIterations = 100
 for(iter in 1:numIterations)
 {
 
@@ -115,8 +112,6 @@ for(iter in 1:numIterations)
 
     newsolutions<-matrix(0,nrow=solutions, ncol=variables)
 
-    threshold<-0.5
-    mutatethreshold<-0.01
     for(i in 1:dim(solutionstokeep)[1])
       {
       for(j in 1:dim(solutionstokeep)[1])
@@ -174,3 +169,4 @@ for(i in 2:dim(BestSolutions)[2])
   lines(density(BestSolutions[,i]))
 }
   
+a<-BestSolutions / solutionvector
