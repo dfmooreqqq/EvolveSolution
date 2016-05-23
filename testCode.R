@@ -50,6 +50,7 @@ solutionvector<-c(1, 5, 10, -7, 10, -1, 13.3, -12.8, 1.45, -20)
 sm<-as.matrix(solutionvector)
 yvalues<-datacreate%*%sm
 xvalues<-datacreate
+df$y<-yvalues
 
 xnam <- paste0("x", 1:variables)
 colnames(xvalues)<-xnam
@@ -63,6 +64,7 @@ df$y<-yvalues
 # Loop through the starting seeds
 loops = 500 # for now, until I get mutate working, we're going to just do a bunch of loops
 RMSEbest<-data.frame(RMSE=rep(-1000, loops))
+Rsqbest<-data.frame(Rsq=rep(-1000, loops))
 BestSolutions<-matrix(data=rep(-1000, variables*loops), nrow=loops, ncol=variables)
 
 
@@ -73,6 +75,7 @@ for(loop in 1:loops)
 solutions = 100
 newsolutions<-matrix(data=runif(solutions*variables,-100,100), nrow=solutions, ncol=variables)
 RMSE<-data.frame(value=rep(-1000000, solutions))
+Rsq<-data.frame(value=rep(-1000000, solutions))
 solutionstokeep<-newsolutions
 
 
@@ -85,17 +88,11 @@ for(iter in 1:numIterations)
     (if (iter > 1 && dim(unique(solutionstokeep))[1]==1) break)
     solutioncenters<-newsolutions
 
-for(i in 1:solutions)
-{
-  smi<-as.matrix(solutioncenters[i,])
-  yvi<-xvalues%*%smi
-  RMSE[i,]<-sqrt(sum((yvi-yvalues)^2))/observations
-}
-
 #keep top ten solutions and breed them
-solutionstokeep<-solutioncenters[order(RMSE)<11,]
+solutionstokeep<-solutioncenters[rank(1-Rsq, ties.method = "first")<sqrt(solutions)+1,]
 newsolutions<-matrix(0,nrow=solutions, ncol=variables)
 threshold<-0.5
+mutatethreshold<-0.01
 for(i in 1:dim(solutionstokeep)[1])
 {
   for(j in 1:dim(solutionstokeep)[1])
@@ -103,8 +100,11 @@ for(i in 1:dim(solutionstokeep)[1])
     #breeding i and j. For each parameter, keep i if random value is less than threshold, j if greater
     #This is the breed function
     newsolutions[10*(i-1)+j,]<-breed(i,j,solutionstokeep, variables)
-    #Now mutate!
-    #newsolutions[10*(i-1)+j,]<-mutate(newsolutions[10*(i-1)+j,], mutatethreshold=0.1)
+    #Now mutate! if below threshold
+    ifelse(runif(1)<mutatethreshold
+           , newsolutions[10*(i-1)+j,]<-mutate(newsolutions[10*(i-1)+j,], mutatethreshold=0.1)
+           , newsolutions[10*(i-1)+j,]<-newsolutions[10*(i-1)+j,]
+    )
   }
 }
 
@@ -119,13 +119,14 @@ for(i in 1:solutions)
   smi<-as.matrix(solutioncenters[i,])
   yvi<-xvalues%*%smi
   RMSE[i,]<-sum((yvi-yvalues)^2)/observations
+  Rsq[i,]<-summary(lm(yvalues~yvi))$r.squared
 }
 
 
 #solutionvector
-BestSolutions[loop,]<-unique(solutionstokeep)
-RMSEbest[loop,]<-RMSE[1,]
-
+        BestSolutions[loop,]<-unique(solutionstokeep)[1,] #only one solution
+        RMSEbest[loop,]<-RMSE[1,] #only one solution
+        Rsqbest[loop,]<-Rsq[1,] #only one solution
 
 #end loop
 }
@@ -133,10 +134,10 @@ RMSEbest[loop,]<-RMSE[1,]
 # Show very best solution
 barplot(sort(RMSEbest[[1]]))
 barplot(sort(RMSEbest[[1]]), log="y")
+barplot(sort(Rsqbest[[1]]))
 
-solutiontocompare<-BestSolutions[order(RMSEbest[[1]])==1,]
+solutiontocompare<-BestSolutions[rank(1-Rsqbest[[1]])==1,]
 
 yvalscompare<-xvalues%*%solutiontocompare
 
-
-
+plot(yvalues, yvalscompare)
