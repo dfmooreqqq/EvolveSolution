@@ -25,6 +25,19 @@ mutate <- function(solution, mutatethreshold=0.1)
     mutatedsolution
 }
 
+judgesolutions <- function(solutionset, yv=yvalues, xv=xvalues)
+{
+  metric<-rep(-1,dim(solutionset)[1])
+  for(i in 1:dim(solutionset)[1])
+  {
+    solution1<-newsolutions[i,]
+    yvi<-xv%*%as.matrix(solution1)
+    metric[i]<-summary(lm(yv~yvi))$r.squared
+  }    
+  
+  metric
+}
+
 
 # Create data -------------------------------------------------------------
 # set.seed(665544)
@@ -62,7 +75,7 @@ df$y<-yvalues
 (fmla <- as.formula(paste("y ~ ", paste(xnam, collapse= "+"))))
 
 # Loop through the starting seeds
-loops = 500 # for now, until I get mutate working, we're going to just do a bunch of loops
+loops = 50 # for now, until I get mutate working, we're going to just do a bunch of loops
 RMSEbest<-data.frame(RMSE=rep(-1000, loops))
 Rsqbest<-data.frame(Rsq=rep(-1000, loops))
 BestSolutions<-matrix(data=rep(-1000, variables*loops), nrow=loops, ncol=variables)
@@ -84,35 +97,43 @@ numIterations = 100
 for(iter in 1:numIterations)
 {
 
-    print(paste("Loop", loop, "Iter", iter, "Curr. Solns",dim(unique(solutionstokeep))[1], sep=" - "))
+    print(paste("Loop", loop, "Iter", iter, "Curr. Solns",dim(unique(solutionstokeep))[1], "Best", max(Rsq$value), sep=" - "))
     (if (iter > 1 && dim(unique(solutionstokeep))[1]==1) break)
     solutioncenters<-newsolutions
 
+    #recode Rsq df
+
 #keep top ten solutions and breed them
-solutionstokeep<-solutioncenters[rank(1-Rsq, ties.method = "first")<sqrt(solutions)+1,]
-newsolutions<-matrix(0,nrow=solutions, ncol=variables)
-threshold<-0.5
-mutatethreshold<-0.01
-for(i in 1:dim(solutionstokeep)[1])
-{
-  for(j in 1:dim(solutionstokeep)[1])
-  {
-    #breeding i and j. For each parameter, keep i if random value is less than threshold, j if greater
-    #This is the breed function
-    newsolutions[10*(i-1)+j,]<-breed(i,j,solutionstokeep, variables)
-    #Now mutate! if below threshold
-    ifelse(runif(1)<mutatethreshold
-           , newsolutions[10*(i-1)+j,]<-mutate(newsolutions[10*(i-1)+j,], mutatethreshold=0.1)
-           , newsolutions[10*(i-1)+j,]<-newsolutions[10*(i-1)+j,]
-    )
-  }
+    #reset Rsq and RMSE matrices
+    Rsq<-data.frame(value=rep(2,dim(newsolutions)[1]))
+    Rsq$value<-judgesolutions(newsolutions)
+    solutionstokeep<-solutioncenters[rank(1-Rsq$value, ties.method = "first")<sqrt(solutions)+1,]
+
+    newsolutions<-matrix(0,nrow=solutions, ncol=variables)
+
+    threshold<-0.5
+    mutatethreshold<-0.01
+    for(i in 1:dim(solutionstokeep)[1])
+      {
+      for(j in 1:dim(solutionstokeep)[1])
+        {
+        #breeding i and j. For each parameter, keep i if random value is less than threshold, j if greater
+        #This is the breed function
+        newsolutions[10*(i-1)+j,]<-breed(i,j,solutionstokeep, variables)
+        #Now mutate! if below threshold
+        ifelse(runif(1)<mutatethreshold
+               , newsolutions[10*(i-1)+j,]<-mutate(newsolutions[10*(i-1)+j,], mutatethreshold=0.1)
+               , newsolutions[10*(i-1)+j,]<-newsolutions[10*(i-1)+j,]
+        )
+      }
+    }
+    
+    
+    
+    #endIteration
 }
 
 
-
-
-#endIteration
-}
 
 for(i in 1:solutions)
 {
