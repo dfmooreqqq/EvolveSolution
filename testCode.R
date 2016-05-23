@@ -32,7 +32,7 @@ judgesolutions <- function(solutionset, yv=yvalues, xv=xvalues)
   {
     solution1<-newsolutions[i,]
     yvi<-xv%*%as.matrix(solution1)
-    metric[i]<-summary(lm(yv~yvi))$r.squared
+    metric[i]<-summary(lm(yv~yvi))$r.squared # this allows for there to be a big offset. Also, the correlation could be negative
   }    
   
   metric
@@ -43,7 +43,7 @@ judgesolutions <- function(solutionset, yv=yvalues, xv=xvalues)
 # set.seed(665544)
 # Let's do 10 variables and 100 observations
 variables = 10
-observations = 1000
+observations = 10000
 error = 5
 datacenters<-runif(variables,-100,100)
 
@@ -59,7 +59,8 @@ xnam <- paste0("x", 1:variables)
 colnames(datacreate)<-xnam
 df<-as.data.frame(datacreate)
 #let's try this formula: x1+5*x2+10*x3-7*x4+10*x5-x6+13.3*x7-12.8*x8+1.45*x9-20*x10
-solutionvector<-c(1, 5, 10, -7, 10, -1, 13.3, -12.8, 1.45, -20)
+#solutionvector<-c(1, 5, 10, -7, 10, -1, 13.3, -12.8, 1.45, -20)
+solutionvector<-round(runif(10,-20,20))
 sm<-as.matrix(solutionvector)
 yvalues<-datacreate%*%sm
 xvalues<-datacreate
@@ -75,7 +76,7 @@ df$y<-yvalues
 (fmla <- as.formula(paste("y ~ ", paste(xnam, collapse= "+"))))
 
 # Loop through the starting seeds
-loops = 50 # for now, until I get mutate working, we're going to just do a bunch of loops
+loops = 100 # for now, until I get mutate working, we're going to just do a bunch of loops
 RMSEbest<-data.frame(RMSE=rep(-1000, loops))
 Rsqbest<-data.frame(Rsq=rep(-1000, loops))
 BestSolutions<-matrix(data=rep(-1000, variables*loops), nrow=loops, ncol=variables)
@@ -134,10 +135,11 @@ for(iter in 1:numIterations)
 }
 
 
+solutionforloop<-unique(solutionstokeep)
 
-for(i in 1:solutions)
+for(i in 1:dim(solutionforloop)[1])
 {
-  smi<-as.matrix(solutioncenters[i,])
+  smi<-as.matrix(solutionforloop[i,])
   yvi<-xvalues%*%smi
   RMSE[i,]<-sum((yvi-yvalues)^2)/observations
   Rsq[i,]<-summary(lm(yvalues~yvi))$r.squared
@@ -145,9 +147,9 @@ for(i in 1:solutions)
 
 
 #solutionvector
-        BestSolutions[loop,]<-unique(solutionstokeep)[1,] #only one solution
-        RMSEbest[loop,]<-RMSE[1,] #only one solution
-        Rsqbest[loop,]<-Rsq[1,] #only one solution
+        BestSolutions[loop,]<-unique(solutionstokeep)[1,] #only one solution per loop
+        RMSEbest[loop,]<-RMSE[1,] #only one solution per loop
+        Rsqbest[loop,]<-Rsq[1,] #only one solution per loop
 
 #end loop
 }
@@ -155,7 +157,7 @@ for(i in 1:solutions)
 # Show very best solution
 barplot(sort(RMSEbest[[1]]))
 barplot(sort(RMSEbest[[1]]), log="y")
-barplot(sort(Rsqbest[[1]]))
+barplot(sort(Rsqbest[[1]]), log="y")
 
 solutiontocompare<-BestSolutions[rank(1-Rsqbest[[1]])==1,]
 
