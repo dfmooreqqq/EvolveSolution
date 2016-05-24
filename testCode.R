@@ -158,6 +158,18 @@ barplot(sort(RMSEbest[[1]]), log="y")
 barplot(sort(Rsqbest[[1]]), log="y")
 
 solutiontocompare<-BestSolutions[rank(1-Rsqbest[[1]])==1,]
+a<-BestSolutions / solutionvector
+a2<-a
+eigensummary<-data.frame(mean=1:dim(BestSolutions)[1], sd=1:dim(BestSolutions)[1])
+for(i in 1:dim(BestSolutions)[1])
+{
+  a2[i,]<-BestSolutions[i,]/solutionvector
+  eigensummary$sd[i]<-sd(a2[i,])
+  eigensummary$mean[i]<-mean(a2[i,])
+}
+eigensummary[rank(1-Rsqbest[[1]])==1,]
+
+
 
 yvalscompare<-xvalues%*%solutiontocompare
 
@@ -168,5 +180,5 @@ for(i in 2:dim(BestSolutions)[2])
 {
   lines(density(BestSolutions[,i]))
 }
-  
-a<-BestSolutions / solutionvector
+
+
